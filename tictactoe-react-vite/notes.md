@@ -517,34 +517,13 @@ export default function Board() {
 
 #### Add `Game` component - renders the `Board` and some markup
 
-```jsx
-function Board() {
-  // ...
-}
+- Add `history` state to the `Game` component to track which player is next and the history of moves
+- `const [history, setHistory] = useState([Array(9).fill(null]);`
 
-export default function Game() {
-  return (
-    <div className="game">
-      <div className="game-board">
-        <Board />
-      </div>
-      <div className="game-info">
-        <ol>{/*TODO*/}</ol>
-      </div>
-    </div>
-  );
-}
-```
+  - `[Array(9).fill(null)]` is an array with a single item
+    - an array of 9 `null`s
+- to render the squares for the current move, read the **last squares array** from the `history` state variable
 
-#### Add `history` state to the `Game` component
-
-- use `history` to track which player is next and the history of moves
-
-  - `const [history, setHistory] = useState([Array(9).fill(null]);`
-  - `[Array(9).fill(null)]` is an array with a single item, an array of 9 `null`s
-- to render the squares for the current move
-
-  - read the **last squares array** from the `history`
   - don't need `useState` for this, enough info to calculate during rendering
   - `const currentSquares = history[history.length - 1];`
 - create a `handlePlay` function inside the `Game` component
@@ -553,19 +532,44 @@ export default function Game() {
 - pass `xIsNext`, `currentSquares`, and `handlePlay` as props to the `Board` component
 
   - like `<Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} />`
+- Make the `Board` component fully controlled by the props it receives
 
-#### Make the `Board` component fully controlled by the props it receives
+  - change the `Board` component to take three props:
 
-- change the `Board` component to take three props:
-  - `xIsNext=` and `squares=`
-  - and a new `onPlay`= function that `Board` can call with the updated squares array when a player makes a move
-- remove `xIsNext` and `squares` states from the `Board` component
-- in the `handleClick()` function on the `Board`
-  - replace the `setSquares `and `setXIsNext` calls with a single call to your new `onPlay` function
-  - so the `Game` component can update the `Board` when a user clicks a square
+    - `xIsNext=` and `squares=`
+    - and a new `onPlay`= function that `Board` can call with the updated squares array when a player makes a move
+  - remove `xIsNext` and `squares` states from the `Board` component
+  - in the `handleClick()` function on the `Board`
+
+    - replace the `setSquares `and `setXIsNext` calls with a single call to your new `onPlay` function
+    - so the `Game` component can update the `Board` when a user clicks a square
+- implement the `handlePlay()` function in the `Game` component
+
+  - Board used to call `setSquares` with an updated array
+  - now it passes the updated `squares` array to `onPlay()`
+  - `handlePlay()` needs to update `Game`'s state to trigger a re-render
+    - but no longer has `setSquares` function to call
+    - now using the `history` state variable to store this information
+  - update `history` by appending the updated `squares` array as a new history entry like: `setHistory([...history, nextSquares]);`
+    - creates a new array that contains all the items in `history` followed by `nextSquares`
+    - read the `...history` spread syntax as "enumerate all the items in `history`"
+  - also toggle `xIsNext` like `setXIsNext(!xIsNext);` (as Board used to do)
+- at this point, we've moved the state to live in the `Game` component
+
+  - the UI should be fully working as before the refactor
 
 ```jsx
-function Board({ xIsNext, squares, onPlay }) {
+import { useState } from 'react';
+
+function Square({ value, onSquareClick }) {  // props passed from Board
+  return (
+    <button className="square" onClick={onSquareClick}>
+      {value}
+    </button>
+  );
+}
+
+function Board({ xIsNext, squares, onPlay }) {  // props passed from Game
   function handleClick(i) {
     if (calculateWinner(squares) || squares[i]) {
       return;
@@ -578,13 +582,66 @@ function Board({ xIsNext, squares, onPlay }) {
     }
     onPlay(nextSquares);
   }
+
+  const winner = calculateWinner(squares);
+  let status;
+  if (winner) {
+    status = 'Winner: ' + winner;
+  } else {
+    status = 'Next player: ' + (xIsNext ? 'X' : 'O');
+  }
+
+  return (
+    <>
+      <div className="status">{status}</div>
+      <div className="board-row">
+        <Square value={squares[0]} onSquareClick={() => handleClick(0)} />
+        <Square value={squares[1]} onSquareClick={() => handleClick(1)} />
+        <Square value={squares[2]} onSquareClick={() => handleClick(2)} />
+      </div>
+      <div className="board-row">
+        <Square value={squares[3]} onSquareClick={() => handleClick(3)} />
+        <Square value={squares[4]} onSquareClick={() => handleClick(4)} />
+        <Square value={squares[5]} onSquareClick={() => handleClick(5)} />
+      </div>
+      <div className="board-row">
+        <Square value={squares[6]} onSquareClick={() => handleClick(6)} />
+        <Square value={squares[7]} onSquareClick={() => handleClick(7)} />
+        <Square value={squares[8]} onSquareClick={() => handleClick(8)} />
+      </div>
+    </>
+  );
+}
+
+export default function Game() {
+  const [xIsNext, setXIsNext] = useState(true);
+  const [history, setHistory] = useState([Array(9).fill(null)]);
+  const currentSquares = history[history.length - 1];
+
+  function handlePlay(nextSquares) {
+    setHistory([...history, nextSquares]);
+    setXIsNext(!xIsNext);
+  }
+
+  return (
+    <div className="game">
+      <div className="game-board">
+        <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} />
+      </div>
+      <div className="game-info">
+        <ol>{/*TODO*/}</ol>
+      </div>
+    </div>
+  );
+}
+
+function calculateWinner(squares) {
   // ...
 }
 ```
 
-- you need to implement the `handlePlay` function in the `Game` component to get the game working again
 
-### Showing the Past Moves
+## Showing the Past Moves
 
 ### Picking a Key
 

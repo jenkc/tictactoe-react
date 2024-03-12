@@ -503,60 +503,76 @@ export default function Board() {
 
 ### Lifting State Up, Again
 
-- now write a new top-level component called `Game` to display a list of past moves, and place the `history` state here
-- placing the `history` state into the `Game` component
-  - will let you remove the `squares` state **from its child** `Board` component
+- write a new top-level component called `Game`
 
+  - to display a list of past moves
+  - place the `history` state here on the `Game`, instead of the `Board`
+
+    - will let you remove the `squares` state **from its child** `Board` component
     - just like we "lifted state up" from the `Square` component into the `Board`
     - now lift it up from the `Board` into the top-level `Game` component
   - gives the `Game` component full control over the `Board`'s data
-
-    - lets it instruct the `Board` to render previous turns from the `history`
+  - lets it instruct the `Board` to render previous turns from the `history`
 - note: move `export default` keywords from the `Board` to the `Game` component
+
   - tells your index.js file to use this as the top-level component
 
 #### Add `Game` component - renders the `Board` and some markup
 
-- Add `history` state to the `Game` component to track which player is next and the history of moves
-- `const [history, setHistory] = useState([Array(9).fill(null]);`
+- Add `history` state to the `Game` component
 
-  - `[Array(9).fill(null)]` is an array with a single item
-    - an array of 9 `null`s
-- to render the squares for the current move, read the **last squares array** from the `history` state variable
+  - to track which player is next and the history of moves
+  - `const [history, setHistory] = useState([Array(9).fill(null]);`
 
-  - don't need `useState` for this, enough info to calculate during rendering
-  - `const currentSquares = history[history.length - 1];`
-- create a `handlePlay` function inside the `Game` component
+    - `[Array(9).fill(null)]` is an array with a single item, an array of 9 `null`s
+- To render the squares *for the current move*
 
-  - that will be called by the `Board` component to update the game
-- pass `xIsNext`, `currentSquares`, and `handlePlay` as props to the `Board` component
+  - read the **last squares array** from the `history` state variable
 
-  - like `<Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} />`
-- Make the `Board` component fully controlled by the props it receives
+    - don't need `useState` for this, enough info to calculate during rendering
+    - `const currentSquares = history[history.length - 1];`
+  - create a `handlePlay` function inside the `Game` component
 
-  - change the `Board` component to take three props:
+    - will be called by the `Board` component to update the game
+- Pass `xIsNext`, `currentSquares`, and `handlePlay `as props to the `Board` component
 
-    - `xIsNext=` and `squares=`
-    - and a new `onPlay`= function that `Board` can call with the updated squares array when a player makes a move
+  - like: `<Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} />`
+  - Make the `Board` component fully controlled by the props it receives
+
+    - changes the `Board` component to take three props:
+
+      - `xIsNext=` and `squares=`
+      - and a new `onPlay`= function that `Board` can call with the updated squares array when a player makes a move
   - remove `xIsNext` and `squares` states from the `Board` component
-  - in the `handleClick()` function on the `Board`
+- in the `handleClick()` function **on the `Board`**
 
-    - replace the `setSquares `and `setXIsNext` calls with a single call to your new `onPlay` function
+  - replace the `setSquares `and `setXIsNext` calls
+  - with a single call to your new `onPlay`() function
     - so the `Game` component can update the `Board` when a user clicks a square
-- implement the `handlePlay()` function in the `Game` component
+- implement the `handlePlay()` function **on the `Game`** component
 
-  - Board used to call `setSquares` with an updated array
-  - now it passes the updated `squares` array to `onPlay()`
-  - `handlePlay()` needs to update `Game`'s state to trigger a re-render
-    - but no longer has `setSquares` function to call
-    - now using the `history` state variable to store this information
-  - update `history` by appending the updated `squares` array as a new history entry like: `setHistory([...history, nextSquares]);`
-    - creates a new array that contains all the items in `history` followed by `nextSquares`
-    - read the `...history` spread syntax as "enumerate all the items in `history`"
-  - also toggle `xIsNext` like `setXIsNext(!xIsNext);` (as Board used to do)
-- at this point, we've moved the state to live in the `Game` component
+  - `handlePlay()` needs to update `Game`'s state to trigger a re-render, but no longer has `setSquares` function to call
 
-  - the UI should be fully working as before the refactor
+    - `Board` used to call `setSquares` with an updated array
+    - now it passes the updated `squares` array to `onPlay=` property on the `Board`
+    - `Game` will now use the `history` state variable to store this information
+  - update `history` by appending the updated `squares` array as a new history entry
+
+    - like: `setHistory([...history, nextSquares]);`
+    - creates a new array that contains
+
+      - all the items in `history, `followed by `nextSquares`()
+      - read the `...history` spread syntax as "enumerate all the items in `history`"
+    - example:
+
+      - if `history` is `[[null,null,null], ["X",null,null]] `
+      - and `nextSquares` is `[["X", null,"O"]]`
+      - then the new `[...history, nextSquares]` array will be:
+
+        - `[[null,null,null], ["X",null,null], ["X",null,"O"]]`
+  - also toggle `xIsNext` with a state updater function
+
+    - like: `setXIsNext(!xIsNext);`  (as Board used to do)
 
 ```jsx
 import { useState } from 'react';
@@ -637,11 +653,29 @@ export default function Game() {
 
 function calculateWinner(squares) {
   // ...
-}
 ```
 
+- at this point, we've moved the state to live in the `Game` component
+  - the UI should be fully working as before the refactor
 
 ## Showing the Past Moves
+
+- record the game's history of past moves, displayed as a list to the players
+- NOTE: React elements like ``<button>`` are regular JavaScript objects
+  - you can pass them around in your application
+  - you can use an array to render multiple items or React elements
+- NOTE: use `map`() Array method in JavaScript to **transform one array into another**
+  - like: `[1, 2, 3].map(x => x * 2)  // [2, 4, 6]`
+- you already have an array of `history` moves in state on the `Game`
+  - use `map` over the `history` array:
+    - transform your `history` of moves into an **array of React elements** representing buttons on the screen
+    - display a list of buttons to "jump" to past moves
+- 
+
+```javascript
+export default function Game() {
+}
+```
 
 ### Picking a Key
 
